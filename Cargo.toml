@@ -15,6 +15,7 @@ categories = ["rendering::graphics-api"]
 
 [dependencies]
 gl = "0.14.0"
+clipboard = "0.5.0"
 
 [dev-dependencies]
 glam = {version = "0.14", features = ["scalar-math"] }
