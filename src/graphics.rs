@@ -2,15 +2,16 @@ use std::{ffi::CString, mem};
 
 mod texture;
 
-use crate::sapp::*;
-
 use std::{error::Error, fmt::Display};
 
 pub use texture::{FilterMode, Texture, TextureAccess, TextureFormat, TextureParams, TextureWrap};
 
+use gl::*;
+use gl::types::*;
+
 fn get_uniform_location(program: GLuint, name: &str) -> Option<i32> {
     let cname = CString::new(name).unwrap_or_else(|e| panic!("{}", e));
-    let location = unsafe { glGetUniformLocation(program, cname.as_ptr()) };
+    let location = unsafe { GetUniformLocation(program, cname.as_ptr()) };
 
     if location == -1 {
         return None;
@@ -175,23 +176,23 @@ impl VertexFormat {
 
     fn type_(&self) -> GLuint {
         match self {
-            VertexFormat::Float1 => GL_FLOAT,
-            VertexFormat::Float2 => GL_FLOAT,
-            VertexFormat::Float3 => GL_FLOAT,
-            VertexFormat::Float4 => GL_FLOAT,
-            VertexFormat::Byte1 => GL_UNSIGNED_BYTE,
-            VertexFormat::Byte2 => GL_UNSIGNED_BYTE,
-            VertexFormat::Byte3 => GL_UNSIGNED_BYTE,
-            VertexFormat::Byte4 => GL_UNSIGNED_BYTE,
-            VertexFormat::Short1 => GL_UNSIGNED_SHORT,
-            VertexFormat::Short2 => GL_UNSIGNED_SHORT,
-            VertexFormat::Short3 => GL_UNSIGNED_SHORT,
-            VertexFormat::Short4 => GL_UNSIGNED_SHORT,
-            VertexFormat::Int1 => GL_UNSIGNED_INT,
-            VertexFormat::Int2 => GL_UNSIGNED_INT,
-            VertexFormat::Int3 => GL_UNSIGNED_INT,
-            VertexFormat::Int4 => GL_UNSIGNED_INT,
-            VertexFormat::Mat4 => GL_FLOAT,
+            VertexFormat::Float1 => gl::FLOAT,
+            VertexFormat::Float2 => gl::FLOAT,
+            VertexFormat::Float3 => gl::FLOAT,
+            VertexFormat::Float4 => gl::FLOAT,
+            VertexFormat::Byte1 => gl::UNSIGNED_BYTE,
+            VertexFormat::Byte2 => gl::UNSIGNED_BYTE,
+            VertexFormat::Byte3 => gl::UNSIGNED_BYTE,
+            VertexFormat::Byte4 => gl::UNSIGNED_BYTE,
+            VertexFormat::Short1 => gl::UNSIGNED_SHORT,
+            VertexFormat::Short2 => gl::UNSIGNED_SHORT,
+            VertexFormat::Short3 => gl::UNSIGNED_SHORT,
+            VertexFormat::Short4 => gl::UNSIGNED_SHORT,
+            VertexFormat::Int1 => gl::UNSIGNED_INT,
+            VertexFormat::Int2 => gl::UNSIGNED_INT,
+            VertexFormat::Int3 => gl::UNSIGNED_INT,
+            VertexFormat::Int4 => gl::UNSIGNED_INT,
+            VertexFormat::Mat4 => gl::FLOAT,
         }
     }
 }
@@ -451,18 +452,18 @@ struct GlCache {
 
 impl GlCache {
     fn bind_buffer(&mut self, target: GLenum, buffer: GLuint, index_type: Option<IndexType>) {
-        if target == GL_ARRAY_BUFFER {
+        if target == gl::ARRAY_BUFFER {
             if self.vertex_buffer != buffer {
                 self.vertex_buffer = buffer;
                 unsafe {
-                    glBindBuffer(target, buffer);
+                    gl::BindBuffer(target, buffer);
                 }
             }
         } else {
             if self.index_buffer != buffer {
                 self.index_buffer = buffer;
                 unsafe {
-                    glBindBuffer(target, buffer);
+                    gl::BindBuffer(target, buffer);
                 }
             }
             self.index_type = index_type;
@@ -470,7 +471,7 @@ impl GlCache {
     }
 
     fn store_buffer_binding(&mut self, target: GLenum) {
-        if target == GL_ARRAY_BUFFER {
+        if target == gl::ARRAY_BUFFER {
             self.stored_vertex_buffer = self.vertex_buffer;
         } else {
             self.stored_index_buffer = self.index_buffer;
@@ -479,7 +480,7 @@ impl GlCache {
     }
 
     fn restore_buffer_binding(&mut self, target: GLenum) {
-        if target == GL_ARRAY_BUFFER {
+        if target == gl::ARRAY_BUFFER {
             if self.stored_vertex_buffer != 0 {
                 self.bind_buffer(target, self.stored_vertex_buffer, None);
                 self.stored_vertex_buffer = 0;
@@ -494,9 +495,9 @@ impl GlCache {
 
     fn bind_texture(&mut self, slot_index: usize, texture: GLuint) {
         unsafe {
-            glActiveTexture(GL_TEXTURE0 + slot_index as GLuint);
+            gl::ActiveTexture(gl::TEXTURE0 + slot_index as GLuint);
             if self.textures[slot_index] != texture {
-                glBindTexture(GL_TEXTURE_2D, texture);
+                gl::BindTexture(gl::TEXTURE_2D, texture);
                 self.textures[slot_index] = texture;
             }
         }
@@ -511,10 +512,10 @@ impl GlCache {
     }
 
     fn clear_buffer_bindings(&mut self) {
-        self.bind_buffer(GL_ARRAY_BUFFER, 0, None);
+        self.bind_buffer(gl::ARRAY_BUFFER, 0, None);
         self.vertex_buffer = 0;
 
-        self.bind_buffer(GL_ELEMENT_ARRAY_BUFFER, 0, None);
+        self.bind_buffer(gl::ELEMENT_ARRAY_BUFFER, 0, None);
         self.index_buffer = 0;
     }
 
@@ -577,25 +578,25 @@ impl RenderPass {
         let depth_img = depth_img.into();
 
         unsafe {
-            glGenFramebuffers(1, &mut gl_fb as *mut _);
-            glBindFramebuffer(GL_FRAMEBUFFER, gl_fb);
-            glFramebufferTexture2D(
-                GL_FRAMEBUFFER,
-                GL_COLOR_ATTACHMENT0,
-                GL_TEXTURE_2D,
+            gl::GenFramebuffers(1, &mut gl_fb as *mut _);
+            gl::BindFramebuffer(gl::FRAMEBUFFER, gl_fb);
+            gl::FramebufferTexture2D(
+                gl::FRAMEBUFFER,
+                gl::COLOR_ATTACHMENT0,
+                gl::TEXTURE_2D,
                 color_img.texture,
                 0,
             );
             if let Some(depth_img) = depth_img {
-                glFramebufferTexture2D(
-                    GL_FRAMEBUFFER,
-                    GL_DEPTH_ATTACHMENT,
-                    GL_TEXTURE_2D,
+                gl::FramebufferTexture2D(
+                    gl::FRAMEBUFFER,
+                    gl::DEPTH_ATTACHMENT,
+                    gl::TEXTURE_2D,
                     depth_img.texture,
                     0,
                 );
             }
-            glBindFramebuffer(GL_FRAMEBUFFER, context.default_framebuffer);
+            gl::BindFramebuffer(gl::FRAMEBUFFER, context.default_framebuffer);
         }
         let pass = RenderPassInternal {
             gl_fb,
@@ -617,7 +618,7 @@ impl RenderPass {
     pub fn delete(&self, ctx: &mut Context) {
         let render_pass = &mut ctx.passes[self.0];
 
-        unsafe { glDeleteFramebuffers(1, &mut render_pass.gl_fb as *mut _) }
+        unsafe { gl::DeleteFramebuffers(1, &mut render_pass.gl_fb as *mut _) }
 
         render_pass.texture.delete();
         if let Some(depth_texture) = render_pass.depth_texture {
@@ -638,17 +639,18 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn new() -> Context {
+    pub fn new<F: FnMut(&'static str) -> *const std::ffi::c_void>(loadfn: F) -> Context {
         unsafe {
+            gl::load_with(loadfn);
             let mut default_framebuffer: GLuint = 0;
-            glGetIntegerv(
-                GL_FRAMEBUFFER_BINDING,
+            gl::GetIntegerv(
+                gl::FRAMEBUFFER_BINDING,
                 &mut default_framebuffer as *mut _ as *mut _,
             );
             let mut vao = 0;
 
-            glGenVertexArrays(1, &mut vao as *mut _);
-            glBindVertexArray(vao);
+            gl::GenVertexArrays(1, &mut vao as *mut _);
+            gl::BindVertexArray(vao);
             Context {
                 default_framebuffer,
                 shaders: vec![],
@@ -675,24 +677,6 @@ impl Context {
         }
     }
 
-    /// The current framebuffer size in pixels
-    /// NOTE: [High DPI Rendering](../conf/index.html#high-dpi-rendering)
-    pub fn screen_size(&self) -> (f32, f32) {
-        unsafe { (sapp_width() as f32, sapp_height() as f32) }
-    }
-
-    /// The dpi scaling factor (window pixels to framebuffer pixels)
-    /// NOTE: [High DPI Rendering](../conf/index.html#high-dpi-rendering)
-    pub fn dpi_scale(&self) -> f32 {
-        unsafe { sapp_dpi_scale() }
-    }
-
-    /// True when high_dpi was requested and actually running in a high-dpi scenario
-    /// NOTE: [High DPI Rendering](../conf/index.html#high-dpi-rendering)
-    pub fn high_dpi(&self) -> bool {
-        unsafe { sapp_high_dpi() }
-    }
-
     pub fn apply_pipeline(&mut self, pipeline: &Pipeline) {
         self.cache.cur_pipeline = Some(*pipeline);
 
@@ -700,30 +684,30 @@ impl Context {
             let pipeline = &self.pipelines[pipeline.0];
             let shader = &mut self.shaders[pipeline.shader.0];
             unsafe {
-                glUseProgram(shader.program);
+                gl::UseProgram(shader.program);
             }
 
             unsafe {
-                glEnable(GL_SCISSOR_TEST);
+                gl::Enable(gl::SCISSOR_TEST);
             }
 
             if pipeline.params.depth_write {
                 unsafe {
-                    glEnable(GL_DEPTH_TEST);
-                    glDepthFunc(pipeline.params.depth_test.into())
+                    gl::Enable(gl::DEPTH_TEST);
+                    gl::DepthFunc(pipeline.params.depth_test.into())
                 }
             } else {
                 unsafe {
-                    glDisable(GL_DEPTH_TEST);
+                    gl::Disable(gl::DEPTH_TEST);
                 }
             }
 
             match pipeline.params.front_face_order {
                 FrontFaceOrder::Clockwise => unsafe {
-                    glFrontFace(GL_CW);
+                    gl::FrontFace(gl::CW);
                 },
                 FrontFaceOrder::CounterClockwise => unsafe {
-                    glFrontFace(GL_CCW);
+                    gl::FrontFace(gl::CCW);
                 },
             }
         }
@@ -745,15 +729,15 @@ impl Context {
 
         match cull_face {
             CullFace::Nothing => unsafe {
-                glDisable(GL_CULL_FACE);
+                gl::Disable(gl::CULL_FACE);
             },
             CullFace::Front => unsafe {
-                glEnable(GL_CULL_FACE);
-                glCullFace(GL_FRONT);
+                gl::Enable(gl::CULL_FACE);
+                gl::CullFace(gl::FRONT);
             },
             CullFace::Back => unsafe {
-                glEnable(GL_CULL_FACE);
-                glCullFace(GL_BACK);
+                gl::Enable(gl::CULL_FACE);
+                gl::CullFace(gl::BACK);
             },
         }
         self.cache.cull_face = cull_face;
@@ -764,7 +748,7 @@ impl Context {
             return;
         }
         let (r, g, b, a) = color_write;
-        unsafe { glColorMask(r as _, g as _, b as _, a as _) }
+        unsafe { gl::ColorMask(r as _, g as _, b as _, a as _) }
         self.cache.color_write = color_write;
     }
 
@@ -779,7 +763,7 @@ impl Context {
         unsafe {
             if let Some(color_blend) = color_blend {
                 if self.cache.color_blend.is_none() {
-                    glEnable(GL_BLEND);
+                    gl::Enable(gl::BLEND);
                 }
 
                 let BlendState {
@@ -794,19 +778,19 @@ impl Context {
                     dfactor: dst_alpha,
                 }) = alpha_blend
                 {
-                    glBlendFuncSeparate(
+                    gl::BlendFuncSeparate(
                         src_rgb.into(),
                         dst_rgb.into(),
                         src_alpha.into(),
                         dst_alpha.into(),
                     );
-                    glBlendEquationSeparate(eq_rgb.into(), eq_alpha.into());
+                    gl::BlendEquationSeparate(eq_rgb.into(), eq_alpha.into());
                 } else {
-                    glBlendFunc(src_rgb.into(), dst_rgb.into());
-                    glBlendEquationSeparate(eq_rgb.into(), eq_rgb.into());
+                    gl::BlendFunc(src_rgb.into(), dst_rgb.into());
+                    gl::BlendEquationSeparate(eq_rgb.into(), eq_rgb.into());
                 }
             } else if self.cache.color_blend.is_some() {
-                glDisable(GL_BLEND);
+                gl::Disable(gl::BLEND);
             }
         }
 
@@ -821,40 +805,40 @@ impl Context {
         unsafe {
             if let Some(stencil) = stencil_test {
                 if self.cache.stencil.is_none() {
-                    glEnable(GL_STENCIL_TEST);
+                    gl::Enable(gl::STENCIL_TEST);
                 }
 
                 let front = &stencil.front;
-                glStencilOpSeparate(
-                    GL_FRONT,
+                gl::StencilOpSeparate(
+                    gl::FRONT,
                     front.fail_op.into(),
                     front.depth_fail_op.into(),
                     front.pass_op.into(),
                 );
-                glStencilFuncSeparate(
-                    GL_FRONT,
+                gl::StencilFuncSeparate(
+                    gl::FRONT,
                     front.test_func.into(),
                     front.test_ref,
                     front.test_mask,
                 );
-                glStencilMaskSeparate(GL_FRONT, front.write_mask);
+                gl::StencilMaskSeparate(gl::FRONT, front.write_mask);
 
                 let back = &stencil.back;
-                glStencilOpSeparate(
-                    GL_BACK,
+                gl::StencilOpSeparate(
+                    gl::BACK,
                     back.fail_op.into(),
                     back.depth_fail_op.into(),
                     back.pass_op.into(),
                 );
-                glStencilFuncSeparate(
-                    GL_BACK,
+                gl::StencilFuncSeparate(
+                    gl::BACK,
                     back.test_func.into(),
                     back.test_ref.into(),
                     back.test_mask,
                 );
-                glStencilMaskSeparate(GL_BACK, back.write_mask);
+                gl::StencilMaskSeparate(gl::BACK, back.write_mask);
             } else if self.cache.stencil.is_some() {
-                glDisable(GL_STENCIL_TEST);
+                gl::Disable(gl::STENCIL_TEST);
             }
         }
 
@@ -865,7 +849,7 @@ impl Context {
     /// Should be applied after begin_pass.
     pub fn apply_viewport(&mut self, x: i32, y: i32, w: i32, h: i32) {
         unsafe {
-            glViewport(x, y, w, h);
+            gl::Viewport(x, y, w, h);
         }
     }
 
@@ -873,7 +857,7 @@ impl Context {
     /// Should be applied after begin_pass.
     pub fn apply_scissor_rect(&mut self, x: i32, y: i32, w: i32, h: i32) {
         unsafe {
-            glScissor(x, y, w, h);
+            gl::Scissor(x, y, w, h);
         }
     }
 
@@ -889,13 +873,13 @@ impl Context {
             if let Some(gl_loc) = shader_image.gl_loc {
                 unsafe {
                     self.cache.bind_texture(n, bindings_image.texture);
-                    glUniform1i(gl_loc, n as i32);
+                    gl::Uniform1i(gl_loc, n as i32);
                 }
             }
         }
 
         self.cache.bind_buffer(
-            GL_ELEMENT_ARRAY_BUFFER,
+            gl::ELEMENT_ARRAY_BUFFER,
             bindings.index_buffer.gl_buf,
             bindings.index_buffer.index_type,
         );
@@ -914,19 +898,19 @@ impl Context {
                     attribute != cached_attr.attribute || cached_attr.gl_vbuf != vb.gl_buf
                 }) {
                     self.cache
-                        .bind_buffer(GL_ARRAY_BUFFER, vb.gl_buf, vb.index_type);
+                        .bind_buffer(gl::ARRAY_BUFFER, vb.gl_buf, vb.index_type);
 
                     unsafe {
-                        glVertexAttribPointer(
+                        gl::VertexAttribPointer(
                             attr_index as GLuint,
                             attribute.size,
                             attribute.type_,
-                            GL_FALSE as u8,
+                            gl::FALSE as u8,
                             attribute.stride,
                             attribute.offset as *mut _,
                         );
-                        glVertexAttribDivisor(attr_index as GLuint, attribute.divisor as u32);
-                        glEnableVertexAttribArray(attr_index as GLuint);
+                        gl::VertexAttribDivisor(attr_index as GLuint, attribute.divisor as u32);
+                        gl::EnableVertexAttribArray(attr_index as GLuint);
                     };
 
                     let cached_attr = &mut self.cache.attributes[attr_index];
@@ -938,7 +922,7 @@ impl Context {
             } else {
                 if cached_attr.is_some() {
                     unsafe {
-                        glDisableVertexAttribArray(attr_index as GLuint);
+                        gl::DisableVertexAttribArray(attr_index as GLuint);
                     }
                     *cached_attr = None;
                 }
@@ -974,31 +958,31 @@ impl Context {
                 if let Some(gl_loc) = uniform.gl_loc {
                     match uniform.uniform_type {
                         Float1 => {
-                            glUniform1fv(gl_loc, uniform.array_count, data);
+                            gl::Uniform1fv(gl_loc, uniform.array_count, data);
                         }
                         Float2 => {
-                            glUniform2fv(gl_loc, uniform.array_count, data);
+                            gl::Uniform2fv(gl_loc, uniform.array_count, data);
                         }
                         Float3 => {
-                            glUniform3fv(gl_loc, uniform.array_count, data);
+                            gl::Uniform3fv(gl_loc, uniform.array_count, data);
                         }
                         Float4 => {
-                            glUniform4fv(gl_loc, uniform.array_count, data);
+                            gl::Uniform4fv(gl_loc, uniform.array_count, data);
                         }
                         Int1 => {
-                            glUniform1iv(gl_loc, uniform.array_count, data_int);
+                            gl::Uniform1iv(gl_loc, uniform.array_count, data_int);
                         }
                         Int2 => {
-                            glUniform2iv(gl_loc, uniform.array_count, data_int);
+                            gl::Uniform2iv(gl_loc, uniform.array_count, data_int);
                         }
                         Int3 => {
-                            glUniform3iv(gl_loc, uniform.array_count, data_int);
+                            gl::Uniform3iv(gl_loc, uniform.array_count, data_int);
                         }
                         Int4 => {
-                            glUniform4iv(gl_loc, uniform.array_count, data_int);
+                            gl::Uniform4iv(gl_loc, uniform.array_count, data_int);
                         }
                         Mat4 => {
-                            glUniformMatrix4fv(gl_loc, uniform.array_count, 0, data);
+                            gl::UniformMatrix4fv(gl_loc, uniform.array_count, 0, data);
                         }
                     }
                 }
@@ -1015,45 +999,45 @@ impl Context {
     ) {
         let mut bits = 0;
         if let Some((r, g, b, a)) = color {
-            bits |= GL_COLOR_BUFFER_BIT;
+            bits |= gl::COLOR_BUFFER_BIT;
             unsafe {
-                glClearColor(r, g, b, a);
+                gl::ClearColor(r, g, b, a);
             }
         }
 
         if let Some(v) = depth {
-            bits |= GL_DEPTH_BUFFER_BIT;
+            bits |= gl::DEPTH_BUFFER_BIT;
             unsafe {
-                glClearDepthf(v);
+                gl::ClearDepthf(v);
             }
         }
 
         if let Some(v) = stencil {
-            bits |= GL_STENCIL_BUFFER_BIT;
+            bits |= gl::STENCIL_BUFFER_BIT;
             unsafe {
-                glClearStencil(v);
+                gl::ClearStencil(v);
             }
         }
 
         if bits != 0 {
             unsafe {
-                glClear(bits);
+                gl::Clear(bits);
             }
         }
     }
 
     /// start rendering to the default frame buffer
-    pub fn begin_default_pass(&mut self, action: PassAction) {
-        self.begin_pass(None, action);
+    pub fn begin_default_pass(&mut self, action: PassAction, w: i32, h: i32) {
+        self.begin_pass(None, action, w, h);
     }
 
     /// start rendering to an offscreen framebuffer
-    pub fn begin_pass(&mut self, pass: impl Into<Option<RenderPass>>, action: PassAction) {
+    pub fn begin_pass(&mut self, pass: impl Into<Option<RenderPass>>, action: PassAction, w: i32, h: i32) {
         let (framebuffer, w, h) = match pass.into() {
             None => (
                 self.default_framebuffer,
-                unsafe { sapp_width() } as i32,
-                unsafe { sapp_height() } as i32,
+                w,
+                h,
             ),
             Some(pass) => {
                 let pass = &self.passes[pass.0];
@@ -1065,9 +1049,9 @@ impl Context {
             }
         };
         unsafe {
-            glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-            glViewport(0, 0, w, h);
-            glScissor(0, 0, w, h);
+            gl::BindFramebuffer(gl::FRAMEBUFFER, framebuffer);
+            gl::Viewport(0, 0, w, h);
+            gl::Scissor(0, 0, w, h);
         }
         match action {
             PassAction::Nothing => {}
@@ -1083,9 +1067,9 @@ impl Context {
 
     pub fn end_render_pass(&mut self) {
         unsafe {
-            glBindFramebuffer(GL_FRAMEBUFFER, self.default_framebuffer);
-            self.cache.bind_buffer(GL_ARRAY_BUFFER, 0, None);
-            self.cache.bind_buffer(GL_ELEMENT_ARRAY_BUFFER, 0, None);
+            gl::BindFramebuffer(gl::FRAMEBUFFER, self.default_framebuffer);
+            self.cache.bind_buffer(gl::ARRAY_BUFFER, 0, None);
+            self.cache.bind_buffer(gl::ELEMENT_ARRAY_BUFFER, 0, None);
         }
     }
 
@@ -1110,7 +1094,7 @@ impl Context {
         let index_type = self.cache.index_type.expect("Unset index buffer type");
 
         unsafe {
-            glDrawElementsInstanced(
+            gl::DrawElementsInstanced(
                 primitive_type,
                 num_elements,
                 index_type.into(),
@@ -1127,22 +1111,22 @@ fn load_shader_internal(
     meta: ShaderMeta,
 ) -> Result<ShaderInternal, ShaderError> {
     unsafe {
-        let vertex_shader = load_shader(GL_VERTEX_SHADER, vertex_shader)?;
-        let fragment_shader = load_shader(GL_FRAGMENT_SHADER, fragment_shader)?;
+        let vertex_shader = load_shader(gl::VERTEX_SHADER, vertex_shader)?;
+        let fragment_shader = load_shader(gl::FRAGMENT_SHADER, fragment_shader)?;
 
-        let program = glCreateProgram();
-        glAttachShader(program, vertex_shader);
-        glAttachShader(program, fragment_shader);
-        glLinkProgram(program);
+        let program = gl::CreateProgram();
+        gl::AttachShader(program, vertex_shader);
+        gl::AttachShader(program, fragment_shader);
+        gl::LinkProgram(program);
 
         let mut link_status = 0;
-        glGetProgramiv(program, GL_LINK_STATUS, &mut link_status as *mut _);
+        gl::GetProgramiv(program, gl::LINK_STATUS, &mut link_status as *mut _);
         if link_status == 0 {
             let mut max_length: i32 = 0;
-            glGetProgramiv(program, GL_INFO_LOG_LENGTH, &mut max_length as *mut _);
+            gl::GetProgramiv(program, gl::INFO_LOG_LENGTH, &mut max_length as *mut _);
 
             let mut error_message = vec![0u8; max_length as usize + 1];
-            glGetProgramInfoLog(
+            gl::GetProgramInfoLog(
                 program,
                 max_length,
                 &mut max_length as *mut _,
@@ -1154,7 +1138,7 @@ fn load_shader_internal(
             return Err(ShaderError::LinkError(error_message.to_string()));
         }
 
-        glUseProgram(program);
+        gl::UseProgram(program);
 
         #[rustfmt::skip]
         let images = meta.images.iter().map(|name| ShaderImage {
@@ -1184,22 +1168,22 @@ fn load_shader_internal(
 
 pub fn load_shader(shader_type: GLenum, source: &str) -> Result<GLuint, ShaderError> {
     unsafe {
-        let shader = glCreateShader(shader_type);
+        let shader = gl::CreateShader(shader_type);
         assert!(shader != 0);
 
         let cstring = CString::new(source)?;
         let csource = [cstring];
-        glShaderSource(shader, 1, csource.as_ptr() as *const _, std::ptr::null());
-        glCompileShader(shader);
+        gl::ShaderSource(shader, 1, csource.as_ptr() as *const _, std::ptr::null());
+        gl::CompileShader(shader);
 
         let mut is_compiled = 0;
-        glGetShaderiv(shader, GL_COMPILE_STATUS, &mut is_compiled as *mut _);
+        gl::GetShaderiv(shader, gl::COMPILE_STATUS, &mut is_compiled as *mut _);
         if is_compiled == 0 {
             let mut max_length: i32 = 0;
-            glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &mut max_length as *mut _);
+            gl::GetShaderiv(shader, gl::INFO_LOG_LENGTH, &mut max_length as *mut _);
 
             let mut error_message = vec![0u8; max_length as usize + 1];
-            glGetShaderInfoLog(
+            gl::GetShaderInfoLog(
                 shader,
                 max_length,
                 &mut max_length as *mut _,
@@ -1218,8 +1202,8 @@ pub fn load_shader(shader_type: GLenum, source: &str) -> Result<GLuint, ShaderEr
 
             return Err(ShaderError::CompilationError {
                 shader_type: match shader_type {
-                    GL_VERTEX_SHADER => ShaderType::Vertex,
-                    GL_FRAGMENT_SHADER => ShaderType::Fragment,
+                    gl::VERTEX_SHADER => ShaderType::Vertex,
+                    gl::FRAGMENT_SHADER => ShaderType::Fragment,
                     _ => unreachable!(),
                 },
                 error_message,
@@ -1261,14 +1245,14 @@ pub enum Comparison {
 impl From<Comparison> for GLenum {
     fn from(cmp: Comparison) -> Self {
         match cmp {
-            Comparison::Never => GL_NEVER,
-            Comparison::Less => GL_LESS,
-            Comparison::LessOrEqual => GL_LEQUAL,
-            Comparison::Greater => GL_GREATER,
-            Comparison::GreaterOrEqual => GL_GEQUAL,
-            Comparison::Equal => GL_EQUAL,
-            Comparison::NotEqual => GL_NOTEQUAL,
-            Comparison::Always => GL_ALWAYS,
+            Comparison::Never => gl::NEVER,
+            Comparison::Less => gl::LESS,
+            Comparison::LessOrEqual => gl::LEQUAL,
+            Comparison::Greater => gl::GREATER,
+            Comparison::GreaterOrEqual => gl::GEQUAL,
+            Comparison::Equal => gl::EQUAL,
+            Comparison::NotEqual => gl::NOTEQUAL,
+            Comparison::Always => gl::ALWAYS,
         }
     }
 }
@@ -1316,9 +1300,9 @@ impl Default for Equation {
 impl From<Equation> for GLenum {
     fn from(eq: Equation) -> Self {
         match eq {
-            Equation::Add => GL_FUNC_ADD,
-            Equation::Subtract => GL_FUNC_SUBTRACT,
-            Equation::ReverseSubtract => GL_FUNC_REVERSE_SUBTRACT,
+            Equation::Add => gl::FUNC_ADD,
+            Equation::Subtract => gl::FUNC_SUBTRACT,
+            Equation::ReverseSubtract => gl::FUNC_REVERSE_SUBTRACT,
         }
     }
 }
@@ -1326,17 +1310,17 @@ impl From<Equation> for GLenum {
 impl From<BlendFactor> for GLenum {
     fn from(factor: BlendFactor) -> GLenum {
         match factor {
-            BlendFactor::Zero => GL_ZERO,
-            BlendFactor::One => GL_ONE,
-            BlendFactor::Value(BlendValue::SourceColor) => GL_SRC_COLOR,
-            BlendFactor::Value(BlendValue::SourceAlpha) => GL_SRC_ALPHA,
-            BlendFactor::Value(BlendValue::DestinationColor) => GL_DST_COLOR,
-            BlendFactor::Value(BlendValue::DestinationAlpha) => GL_DST_ALPHA,
-            BlendFactor::OneMinusValue(BlendValue::SourceColor) => GL_ONE_MINUS_SRC_COLOR,
-            BlendFactor::OneMinusValue(BlendValue::SourceAlpha) => GL_ONE_MINUS_SRC_ALPHA,
-            BlendFactor::OneMinusValue(BlendValue::DestinationColor) => GL_ONE_MINUS_DST_COLOR,
-            BlendFactor::OneMinusValue(BlendValue::DestinationAlpha) => GL_ONE_MINUS_DST_ALPHA,
-            BlendFactor::SourceAlphaSaturate => GL_SRC_ALPHA_SATURATE,
+            BlendFactor::Zero => gl::ZERO,
+            BlendFactor::One => gl::ONE,
+            BlendFactor::Value(BlendValue::SourceColor) => gl::SRC_COLOR,
+            BlendFactor::Value(BlendValue::SourceAlpha) => gl::SRC_ALPHA,
+            BlendFactor::Value(BlendValue::DestinationColor) => gl::DST_COLOR,
+            BlendFactor::Value(BlendValue::DestinationAlpha) => gl::DST_ALPHA,
+            BlendFactor::OneMinusValue(BlendValue::SourceColor) => gl::ONE_MINUS_SRC_COLOR,
+            BlendFactor::OneMinusValue(BlendValue::SourceAlpha) => gl::ONE_MINUS_SRC_ALPHA,
+            BlendFactor::OneMinusValue(BlendValue::DestinationColor) => gl::ONE_MINUS_DST_COLOR,
+            BlendFactor::OneMinusValue(BlendValue::DestinationAlpha) => gl::ONE_MINUS_DST_ALPHA,
+            BlendFactor::SourceAlphaSaturate => gl::SRC_ALPHA_SATURATE,
         }
     }
 }
@@ -1344,14 +1328,14 @@ impl From<BlendFactor> for GLenum {
 impl From<StencilOp> for GLenum {
     fn from(op: StencilOp) -> Self {
         match op {
-            StencilOp::Keep => GL_KEEP,
-            StencilOp::Zero => GL_ZERO,
-            StencilOp::Replace => GL_REPLACE,
-            StencilOp::IncrementClamp => GL_INCR,
-            StencilOp::DecrementClamp => GL_DECR,
-            StencilOp::Invert => GL_INVERT,
-            StencilOp::IncrementWrap => GL_INCR_WRAP,
-            StencilOp::DecrementWrap => GL_DECR_WRAP,
+            StencilOp::Keep => gl::KEEP,
+            StencilOp::Zero => gl::ZERO,
+            StencilOp::Replace => gl::REPLACE,
+            StencilOp::IncrementClamp => gl::INCR,
+            StencilOp::DecrementClamp => gl::DECR,
+            StencilOp::Invert => gl::INVERT,
+            StencilOp::IncrementWrap => gl::INCR_WRAP,
+            StencilOp::DecrementWrap => gl::DECR_WRAP,
         }
     }
 }
@@ -1359,14 +1343,14 @@ impl From<StencilOp> for GLenum {
 impl From<CompareFunc> for GLenum {
     fn from(cf: CompareFunc) -> Self {
         match cf {
-            CompareFunc::Always => GL_ALWAYS,
-            CompareFunc::Never => GL_NEVER,
-            CompareFunc::Less => GL_LESS,
-            CompareFunc::Equal => GL_EQUAL,
-            CompareFunc::LessOrEqual => GL_LEQUAL,
-            CompareFunc::Greater => GL_GREATER,
-            CompareFunc::NotEqual => GL_NOTEQUAL,
-            CompareFunc::GreaterOrEqual => GL_GEQUAL,
+            CompareFunc::Always => gl::ALWAYS,
+            CompareFunc::Never => gl::NEVER,
+            CompareFunc::Less => gl::LESS,
+            CompareFunc::Equal => gl::EQUAL,
+            CompareFunc::LessOrEqual => gl::LEQUAL,
+            CompareFunc::Greater => gl::GREATER,
+            CompareFunc::NotEqual => gl::NOTEQUAL,
+            CompareFunc::GreaterOrEqual => gl::GEQUAL,
         }
     }
 }
@@ -1380,8 +1364,8 @@ pub enum PrimitiveType {
 impl From<PrimitiveType> for GLenum {
     fn from(primitive_type: PrimitiveType) -> Self {
         match primitive_type {
-            PrimitiveType::Triangles => GL_TRIANGLES,
-            PrimitiveType::Lines => GL_LINES,
+            PrimitiveType::Triangles => gl::TRIANGLES,
+            PrimitiveType::Lines => gl::LINES,
         }
     }
 }
@@ -1396,9 +1380,9 @@ pub enum IndexType {
 impl From<IndexType> for GLenum {
     fn from(index_type: IndexType) -> Self {
         match index_type {
-            IndexType::Byte => GL_UNSIGNED_BYTE,
-            IndexType::Short => GL_UNSIGNED_SHORT,
-            IndexType::Int => GL_UNSIGNED_INT,
+            IndexType::Byte => gl::UNSIGNED_BYTE,
+            IndexType::Short => gl::UNSIGNED_SHORT,
+            IndexType::Int => gl::UNSIGNED_INT,
         }
     }
 }
@@ -1560,7 +1544,7 @@ impl Pipeline {
             let layout = buffer_layout.get(*buffer_index).unwrap_or_else(|| panic!());
 
             let cname = CString::new(*name).unwrap_or_else(|e| panic!("{}", e));
-            let attr_loc = unsafe { glGetAttribLocation(program, cname.as_ptr() as *const _) };
+            let attr_loc = unsafe { gl::GetAttribLocation(program, cname.as_ptr() as *const _) };
             let attr_loc = if attr_loc == -1 { None } else { Some(attr_loc) };
             let divisor = if layout.step_func == VertexStep::PerVertex {
                 0
@@ -1668,16 +1652,16 @@ pub enum Usage {
 
 fn gl_buffer_target(buffer_type: &BufferType) -> GLenum {
     match buffer_type {
-        BufferType::VertexBuffer => GL_ARRAY_BUFFER,
-        BufferType::IndexBuffer => GL_ELEMENT_ARRAY_BUFFER,
+        BufferType::VertexBuffer => gl::ARRAY_BUFFER,
+        BufferType::IndexBuffer => gl::ELEMENT_ARRAY_BUFFER,
     }
 }
 
 fn gl_usage(usage: &Usage) -> GLenum {
     match usage {
-        Usage::Immutable => GL_STATIC_DRAW,
-        Usage::Dynamic => GL_DYNAMIC_DRAW,
-        Usage::Stream => GL_STREAM_DRAW,
+        Usage::Immutable => gl::STATIC_DRAW,
+        Usage::Dynamic => gl::DYNAMIC_DRAW,
+        Usage::Stream => gl::STREAM_DRAW,
     }
 }
 
@@ -1718,11 +1702,11 @@ impl Buffer {
         let mut gl_buf: u32 = 0;
 
         unsafe {
-            glGenBuffers(1, &mut gl_buf as *mut _);
+            gl::GenBuffers(1, &mut gl_buf as *mut _);
             ctx.cache.store_buffer_binding(gl_target);
             ctx.cache.bind_buffer(gl_target, gl_buf, index_type);
-            glBufferData(gl_target, size as _, std::ptr::null() as *const _, gl_usage);
-            glBufferSubData(gl_target, 0, size as _, data.as_ptr() as *const _);
+            gl::BufferData(gl_target, size as _, std::ptr::null() as *const _, gl_usage);
+            gl::BufferSubData(gl_target, 0, size as _, data.as_ptr() as *const _);
             ctx.cache.restore_buffer_binding(gl_target);
         }
 
@@ -1746,10 +1730,10 @@ impl Buffer {
         let mut gl_buf: u32 = 0;
 
         unsafe {
-            glGenBuffers(1, &mut gl_buf as *mut _);
+            gl::GenBuffers(1, &mut gl_buf as *mut _);
             ctx.cache.store_buffer_binding(gl_target);
             ctx.cache.bind_buffer(gl_target, gl_buf, None);
-            glBufferData(gl_target, size as _, std::ptr::null() as *const _, gl_usage);
+            gl::BufferData(gl_target, size as _, std::ptr::null() as *const _, gl_usage);
             ctx.cache.restore_buffer_binding(gl_target);
         }
 
@@ -1767,10 +1751,10 @@ impl Buffer {
         let mut gl_buf: u32 = 0;
 
         unsafe {
-            glGenBuffers(1, &mut gl_buf as *mut _);
+            gl::GenBuffers(1, &mut gl_buf as *mut _);
             ctx.cache.store_buffer_binding(gl_target);
             ctx.cache.bind_buffer(gl_target, gl_buf, None);
-            glBufferData(gl_target, size as _, std::ptr::null() as *const _, gl_usage);
+            gl::BufferData(gl_target, size as _, std::ptr::null() as *const _, gl_usage);
             ctx.cache.restore_buffer_binding(gl_target);
         }
 
@@ -1795,7 +1779,7 @@ impl Buffer {
         ctx.cache.store_buffer_binding(gl_target);
         ctx.cache
             .bind_buffer(gl_target, self.gl_buf, self.index_type);
-        unsafe { glBufferSubData(gl_target, 0, size as _, data.as_ptr() as *const _) };
+        unsafe { gl::BufferSubData(gl_target, 0, size as _, data.as_ptr() as *const _) };
         ctx.cache.restore_buffer_binding(gl_target);
     }
 
@@ -1812,7 +1796,7 @@ impl Buffer {
     /// There is no protection against using deleted textures later. However its not an UB in OpenGl and thats why
     /// this function is not marked as unsafe
     pub fn delete(&self) {
-        unsafe { glDeleteBuffers(1, &self.gl_buf as *const _) }
+        unsafe { gl::DeleteBuffers(1, &self.gl_buf as *const _) }
     }
 }
 
@@ -1895,14 +1879,14 @@ impl ElapsedQuery {
     ///
     /// The query can be used again after retriving the result.
     ///
-    /// Implemented as `glBeginQuery(GL_TIME_ELAPSED, ...)` on OpenGL/WebGL platforms.
+    /// Implemented as `gl::BeginQuery(gl::TIME_ELAPSED, ...)` on OpenGL/WebGL platforms.
     ///
     /// Use [`ElapsedQuery::is_supported()`] to check if functionality is available and the method can be called.
     pub fn begin_query(&mut self) {
         if self.gl_query == 0 {
-            unsafe { glGenQueries(1, &mut self.gl_query) };
+            unsafe { gl::GenQueries(1, &mut self.gl_query) };
         }
-        unsafe { glBeginQuery(GL_TIME_ELAPSED, self.gl_query) };
+        unsafe { gl::BeginQuery(gl::TIME_ELAPSED, self.gl_query) };
     }
 
     /// Submit an end of elapsed-time query that can be read later when rendering is complete.
@@ -1910,9 +1894,9 @@ impl ElapsedQuery {
     /// This function is usd in conjunction with [`ElapsedQuery::begin_query()`] and
     /// [`ElapsedQuery::get_result()`].
     ///
-    /// Implemented as `glEndQuery(GL_TIME_ELAPSED)` on OpenGL/WebGL platforms.
+    /// Implemented as `gl::EndQuery(gl::TIME_ELAPSED)` on OpenGL/WebGL platforms.
     pub fn end_query(&mut self) {
-        unsafe { glEndQuery(GL_TIME_ELAPSED) };
+        unsafe { gl::EndQuery(gl::TIME_ELAPSED) };
     }
 
     /// Retreieve measured duration in nanonseconds.
@@ -1925,13 +1909,8 @@ impl ElapsedQuery {
     pub fn get_result(&self) -> u64 {
         let mut time: GLuint64 = 0;
         assert!(self.gl_query != 0);
-        unsafe { glGetQueryObjectui64v(self.gl_query, GL_QUERY_RESULT, &mut time) };
+        unsafe { gl::GetQueryObjectui64v(self.gl_query, gl::QUERY_RESULT, &mut time) };
         time
-    }
-
-    /// Reports whenever elapsed timer is supported and other methods can be invoked.
-    pub fn is_supported() -> bool {
-        unsafe { sapp_is_elapsed_timer_supported() }
     }
 
     /// Reports whenever result of submitted query is available for retrieval with
@@ -1949,7 +1928,7 @@ impl ElapsedQuery {
             return false;
         }
 
-        unsafe { glGetQueryObjectiv(self.gl_query, GL_QUERY_RESULT_AVAILABLE, &mut available) };
+        unsafe { gl::GetQueryObjectiv(self.gl_query, gl::QUERY_RESULT_AVAILABLE, &mut available) };
         available != 0
     }
 
@@ -1957,9 +1936,9 @@ impl ElapsedQuery {
     ///
     /// Note that the query is not deleted automatically when dropped.
     ///
-    /// Implemented as `glDeleteQueries(...)` on OpenGL/WebGL platforms.
+    /// Implemented as `gl::DeleteQueries(...)` on OpenGL/WebGL platforms.
     pub fn delete(&mut self) {
-        unsafe { glDeleteQueries(1, &mut self.gl_query) }
+        unsafe { gl::DeleteQueries(1, &mut self.gl_query) }
         self.gl_query = 0;
     }
 }

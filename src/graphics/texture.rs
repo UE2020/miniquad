@@ -1,4 +1,7 @@
-use crate::{sapp::*, Context};
+use crate::{Context};
+
+use gl::*;
+use gl::types::*;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Texture {
@@ -40,7 +43,7 @@ impl Texture {
     /// this function is not marked as unsafe
     pub fn delete(&self) {
         unsafe {
-            glDeleteTextures(1, &self.texture as *const _);
+            gl::DeleteTextures(1, &self.texture as *const _);
         }
     }
 }
@@ -60,13 +63,13 @@ pub enum TextureFormat {
 impl From<TextureFormat> for (GLenum, GLenum, GLenum) {
     fn from(format: TextureFormat) -> Self {
         match format {
-            TextureFormat::RGB8 => (GL_RGB, GL_RGB, GL_UNSIGNED_BYTE),
-            TextureFormat::RGBA8 => (GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE),
-            TextureFormat::Depth => (GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT),
+            TextureFormat::RGB8 => (gl::RGB, gl::RGB, gl::UNSIGNED_BYTE),
+            TextureFormat::RGBA8 => (gl::RGBA, gl::RGBA, gl::UNSIGNED_BYTE),
+            TextureFormat::Depth => (gl::DEPTH_COMPONENT, gl::DEPTH_COMPONENT, gl::UNSIGNED_SHORT),
             #[cfg(target_arch = "wasm32")]
-            TextureFormat::Alpha => (GL_ALPHA, GL_ALPHA, GL_UNSIGNED_BYTE),
+            TextureFormat::Alpha => (gl::ALPHA, gl::ALPHA, gl::UNSIGNED_BYTE),
             #[cfg(not(target_arch = "wasm32"))]
-            TextureFormat::Alpha => (GL_R8, GL_RED, GL_UNSIGNED_BYTE), // texture updates will swizzle Red -> Alpha to match WASM
+            TextureFormat::Alpha => (gl::R8, gl::RED, gl::UNSIGNED_BYTE), // texture updates will swizzle Red -> Alpha to match WASM
         }
     }
 }
@@ -100,17 +103,17 @@ impl Default for TextureParams {
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum TextureWrap {
     /// Samples at coord x + 1 map to coord x.
-    Repeat = GL_REPEAT as isize,
+    Repeat = gl::REPEAT as isize,
     /// Samples at coord x + 1 map to coord 1 - x.
-    Mirror = GL_MIRRORED_REPEAT as isize,
+    Mirror = gl::MIRRORED_REPEAT as isize,
     /// Samples at coord x + 1 map to coord 1.
-    Clamp = GL_CLAMP_TO_EDGE as isize,
+    Clamp = gl::CLAMP_TO_EDGE as isize,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum FilterMode {
-    Linear = GL_LINEAR as isize,
-    Nearest = GL_NEAREST as isize,
+    Linear = gl::LINEAR as isize,
+    Nearest = gl::NEAREST as isize,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -156,24 +159,24 @@ impl Texture {
         let mut texture: GLuint = 0;
 
         unsafe {
-            glGenTextures(1, &mut texture as *mut _);
+            gl::GenTextures(1, &mut texture as *mut _);
             ctx.cache.bind_texture(0, texture);
-            glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // miniquad always uses row alignment of 1
+            gl::PixelStorei(gl::UNPACK_ALIGNMENT, 1); // miniquad always uses row alignment of 1
 
             if cfg!(not(target_arch = "wasm32")) {
                 // if not WASM
                 if params.format == TextureFormat::Alpha {
                     // if alpha miniquad texture, the value on non-WASM is stored in red channel
                     // swizzle red -> alpha
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_RED as _);
+                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_SWIZZLE_A, gl::RED as _);
                 } else {
                     // keep alpha -> alpha
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_ALPHA as _);
+                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_SWIZZLE_A, gl::ALPHA as _);
                 }
             }
 
-            glTexImage2D(
-                GL_TEXTURE_2D,
+            gl::TexImage2D(
+                gl::TEXTURE_2D,
                 0,
                 internal_format as i32,
                 params.width as i32,
@@ -187,10 +190,10 @@ impl Texture {
                 },
             );
 
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, params.wrap as i32);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, params.wrap as i32);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, params.filter as i32);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, params.filter as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, params.wrap as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, params.wrap as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, params.filter as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, params.filter as i32);
         }
         ctx.cache.restore_texture_binding(0);
 
@@ -228,8 +231,8 @@ impl Texture {
         ctx.cache.store_texture_binding(0);
         ctx.cache.bind_texture(0, self.texture);
         unsafe {
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter as i32);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, filter as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, filter as i32);
         }
         ctx.cache.restore_texture_binding(0);
     }
@@ -244,8 +247,8 @@ impl Texture {
         self.height = height;
 
         unsafe {
-            glTexImage2D(
-                GL_TEXTURE_2D,
+            gl::TexImage2D(
+                gl::TEXTURE_2D,
                 0,
                 internal_format as i32,
                 self.width as i32,
@@ -297,22 +300,22 @@ impl Texture {
         let (_, format, pixel_type) = self.format.into();
 
         unsafe {
-            glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // miniquad always uses row alignment of 1
+            gl::PixelStorei(gl::UNPACK_ALIGNMENT, 1); // miniquad always uses row alignment of 1
 
             if cfg!(not(target_arch = "wasm32")) {
                 // if not WASM
                 if self.format == TextureFormat::Alpha {
                     // if alpha miniquad texture, the value on non-WASM is stored in red channel
                     // swizzle red -> alpha
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_RED as _);
+                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_SWIZZLE_A, gl::RED as _);
                 } else {
                     // keep alpha -> alpha
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_ALPHA as _);
+                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_SWIZZLE_A, gl::ALPHA as _);
                 }
             }
 
-            glTexSubImage2D(
-                GL_TEXTURE_2D,
+            gl::TexSubImage2D(
+                gl::TEXTURE_2D,
                 0,
                 x_offset as _,
                 y_offset as _,
@@ -334,18 +337,18 @@ impl Texture {
         let mut fbo = 0;
         unsafe {
             let mut binded_fbo: i32 = 0;
-            glGetIntegerv(gl::GL_DRAW_FRAMEBUFFER_BINDING, &mut binded_fbo);
-            glGenFramebuffers(1, &mut fbo);
-            glBindFramebuffer(gl::GL_FRAMEBUFFER, fbo);
-            glFramebufferTexture2D(
-                gl::GL_FRAMEBUFFER,
-                gl::GL_COLOR_ATTACHMENT0,
-                gl::GL_TEXTURE_2D,
+            gl::GetIntegerv(gl::DRAW_FRAMEBUFFER_BINDING, &mut binded_fbo);
+            gl::GenFramebuffers(1, &mut fbo);
+            gl::BindFramebuffer(gl::FRAMEBUFFER, fbo);
+            gl::FramebufferTexture2D(
+                gl::FRAMEBUFFER,
+                gl::COLOR_ATTACHMENT0,
+                gl::TEXTURE_2D,
                 self.texture,
                 0,
             );
 
-            glReadPixels(
+            gl::ReadPixels(
                 0,
                 0,
                 self.width as _,
@@ -355,8 +358,8 @@ impl Texture {
                 bytes.as_mut_ptr() as _,
             );
 
-            glBindFramebuffer(gl::GL_FRAMEBUFFER, binded_fbo as _);
-            glDeleteFramebuffers(1, &fbo);
+            gl::BindFramebuffer(gl::FRAMEBUFFER, binded_fbo as _);
+            gl::DeleteFramebuffers(1, &fbo);
         }
     }
 
