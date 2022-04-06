@@ -452,19 +452,19 @@ struct GlCache {
 impl GlCache {
     fn bind_buffer(&mut self, target: GLenum, buffer: GLuint, index_type: Option<IndexType>) {
         if target == GL_ARRAY_BUFFER {
-            //if self.vertex_buffer != buffer {
+            if self.vertex_buffer != buffer {
                 self.vertex_buffer = buffer;
                 unsafe {
                     glBindBuffer(target, buffer);
                 }
-           //}
+           }
         } else {
-            //if self.index_buffer != buffer {
+            if self.index_buffer != buffer {
                 self.index_buffer = buffer;
                 unsafe {
                     glBindBuffer(target, buffer);
                 }
-            //}
+            }
             self.index_type = index_type;
         }
     }
@@ -495,10 +495,10 @@ impl GlCache {
     fn bind_texture(&mut self, slot_index: usize, texture: GLuint) {
         unsafe {
             glActiveTexture(GL_TEXTURE0 + slot_index as GLuint);
-            //if self.textures[slot_index] != texture {
+            if self.textures[slot_index] != texture {
                 glBindTexture(GL_TEXTURE_2D, texture);
                 self.textures[slot_index] = texture;
-            //}
+            }
         }
     }
 
